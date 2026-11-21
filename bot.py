@@ -322,7 +322,10 @@ def main():
             "Не найден TELEGRAM_BOT_TOKEN"
         )
 
-    photos = prepare_photos()
+    photos = [
+        NUMBERED_FOLDER / f"{number:02d}.jpg"
+        for number in range(1, 10)
+    ]
 
     app = (
         Application.builder()
