@@ -114,12 +114,18 @@ async def show_catalog(message, context):
         for photo in files:
             photo.close()
 
-    await message.reply_text(
-        "🤍 Выберите студию по номеру.",
-        reply_markup=make_keyboard(
-            [ORDER_BUTTON, BACK_BUTTON, HOME_BUTTON]
-        ),
-    )
+numbers = [
+    f"{number:02d}"
+    for number in range(1, 10)
+]
+
+await message.reply_text(
+    "🤍 Выберите студию по номеру:",
+    reply_markup=make_keyboard(
+        numbers + [BACK_BUTTON, HOME_BUTTON],
+        columns=3,
+    ),
+)
 
 
 async def messages(
