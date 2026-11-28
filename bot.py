@@ -1,5 +1,6 @@
 
 import os
+import asyncio
 from pathlib import Path
 
 from telegram import (
