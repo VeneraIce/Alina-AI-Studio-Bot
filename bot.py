@@ -92,7 +92,7 @@ async def show_audiences(message, context):
     )
 
 
-async def show_catalog(message, context):
+async def show_catalog(message, context):  
     paths = catalog_paths(context.user_data["direction"], context.user_data["audience"])
     if not paths:
         return
@@ -114,18 +114,18 @@ async def show_catalog(message, context):
         for photo in files:
             photo.close()
 
-numbers = [
-    f"{number:02d}"
-    for number in range(1, 10)
-]
+    numbers = [
+        f"{number:02d}"
+        for number in range(1, 10)
+    ]
 
-await message.reply_text(
-    "🤍 Выберите студию по номеру:",
-    reply_markup=make_keyboard(
-        numbers + [BACK_BUTTON, HOME_BUTTON],
-        columns=3,
-    ),
-)
+    await message.reply_text(
+        "🤍 Выберите студию по номеру:",
+        reply_markup=make_keyboard(
+            numbers + [BACK_BUTTON, HOME_BUTTON],
+            columns=3,
+        ),
+    )
 
 
 async def messages(
