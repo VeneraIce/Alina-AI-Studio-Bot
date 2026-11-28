@@ -2,7 +2,6 @@
 import os
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
@@ -16,7 +15,12 @@ from telegram.ext import (
     filters,
 )
 
-MAIN_BUTTON = "🎄 Новогодняя фотосессия"
+MAIN_BUTTON = "🎄 Новогодняя & рождественская фотосессия"
+MAIN_BUTTONS = [MAIN_BUTTON, "📸 Студийная фотосессия", "🌿 Уличная фотосессия"]
+AUDIENCES = ["Женская", "Мужская", "Детская", "Семейная"]
+DIRECTIONS = dict(zip(MAIN_BUTTONS, ["new_year", "studio", "outdoor"]))
+DIRECTION_LABELS = dict(zip(MAIN_BUTTONS, ["🎄 Новогодняя & рождественская фотосессия", "📸 Студийная фотосессия", "🌿 Уличная фотосессия"]))
+AUDIENCE_DIRS = dict(zip(AUDIENCES, ["female", "male", "child", "family"]))
 ORDER_BUTTON = "💌 Заказать"
 BACK_BUTTON = "⬅️ Назад"
 HOME_BUTTON = "🏠 Главное меню"
@@ -25,20 +29,7 @@ ADMIN_ID = int(os.environ.get("TELEGRAM_ADMIN_ID", "0"))
 
 BASE_FOLDER = Path(__file__).resolve().parent
 
-PHOTO_FOLDER = (
-    BASE_FOLDER
-    / "catalog"
-    / "Новогодние_фотосессии_каталог"
-    / "Фотографии"
-)
-
 NUMBERED_FOLDER = BASE_FOLDER / "numbered_photos"
-
-# Старые номера утверждённых фотографий
-SELECTED_PHOTOS = [
-    "01", "02", "03", "05", "06",
-    "08", "10", "12", "16",
-]
 
 
 def make_keyboard(buttons, columns=1):
@@ -52,97 +43,6 @@ def make_keyboard(buttons, columns=1):
     )
 
 
-def prepare_photos():
-    NUMBERED_FOLDER.mkdir(exist_ok=True)
-    prepared = []
-
-    for new_number, old_number in enumerate(
-        SELECTED_PHOTOS, start=1
-    ):
-        matches = sorted(
-            PHOTO_FOLDER.glob(f"{old_number}_*.jpg")
-        )
-
-        if not matches:
-            raise FileNotFoundError(
-                f"Не найдена фотография {old_number}"
-            )
-
-        destination = (
-            NUMBERED_FOLDER / f"{new_number:02d}.jpg"
-        )
-
-        with Image.open(matches[0]) as original:
-            picture = original.convert("RGB")
-            picture.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
-            picture = picture.copy()
-            width, height = picture.size
-            label = f"{new_number:02d}"
-
-            font_size = max(32, width // 18)
-
-            font_paths = [
-                "C:/Windows/Fonts/arialbd.ttf",
-                "C:/Windows/Fonts/arial.ttf",
-            ]
-
-            font = ImageFont.load_default()
-
-            for font_path in font_paths:
-                if Path(font_path).exists():
-                    font = ImageFont.truetype(
-                        font_path, font_size
-                    )
-                    break
-
-            draw = ImageDraw.Draw(
-                picture, "RGBA"
-            )
-
-            padding = max(12, width // 55)
-            margin = max(16, width // 45)
-
-            bounds = draw.textbbox(
-                (0, 0), label, font=font
-            )
-
-            text_width = bounds[2] - bounds[0]
-            text_height = bounds[3] - bounds[1]
-
-            box_width = text_width + padding * 2
-            box_height = text_height + padding * 2
-
-            x = width - margin - box_width
-            y = height - margin - box_height
-
-            draw.rounded_rectangle(
-                (
-                    x, y,
-                    x + box_width,
-                    y + box_height,
-                ),
-                radius=padding,
-                fill=(20, 20, 20, 145),
-            )
-
-            draw.text(
-                (x + padding, y + padding - bounds[1]),
-                label,
-                font=font,
-                fill=(255, 255, 255, 255),
-            )
-
-            picture.save(
-                destination,
-                "JPEG",
-                quality=92,
-            )
-
-        prepared.append(destination)
-
-    return prepared
-
-
 async def start(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -153,7 +53,7 @@ async def start(
         "🤍 Добро пожаловать в "
         "Alina Kravtsova | AI Studio!\n\n"
         "✨ Выберите понравившуюся фотосессию!",
-        reply_markup=make_keyboard([MAIN_BUTTON]),
+        reply_markup=make_keyboard(MAIN_BUTTONS),
     )
 
 
@@ -166,10 +66,39 @@ async def myid(
     )
 
 
-async def show_catalog(message, context):
-    context.user_data["page"] = "catalog"
+def catalog_paths(direction, audience):
+    # Готовые новогодние женский и мужской каталоги уже лежат
+    # непосредственно в numbered_photos/female и numbered_photos/male.
+    if direction == MAIN_BUTTON:
+        folder = NUMBERED_FOLDER / AUDIENCE_DIRS[audience]
+    else:
+        # Для студийного и уличного направлений используем отдельные папки.
+        folder = NUMBERED_FOLDER / DIRECTIONS[direction] / AUDIENCE_DIRS[audience]
 
-    paths = context.application.bot_data["photos"]
+    paths = [folder / f"{n:02d}.jpg" for n in range(1, 10)]
+    return paths if all(path.is_file() for path in paths) else []
+
+
+async def show_audiences(message, context):
+    direction = context.user_data["direction"]
+    context.user_data.clear()
+    context.user_data.update(direction=direction, page="audience")
+    await message.reply_text(
+        f"{DIRECTION_LABELS[direction]}\n\n✨ Для кого хотите создать фотосессию?",
+        reply_markup=ReplyKeyboardMarkup(
+            [AUDIENCES[:2], AUDIENCES[2:], [HOME_BUTTON]],
+            resize_keyboard=True,
+        ),
+    )
+
+
+async def show_catalog(message, context):
+    paths = catalog_paths(context.user_data["direction"], context.user_data["audience"])
+    if not paths:
+        return
+    context.user_data["page"] = "catalog"
+    context.user_data.pop("order_photos", None)
+    context.user_data.pop("selected_style", None)
 
     files = [path.open("rb") for path in paths]
 
@@ -204,12 +133,29 @@ async def messages(
         await start(update, context)
         return
 
-    if text == MAIN_BUTTON:
+    if text in MAIN_BUTTONS:
+        context.user_data.clear()
+        context.user_data["direction"] = text
+        await show_audiences(message, context)
+        return
+
+    page = context.user_data.get("page")
+    if text in AUDIENCES and page == "audience":
+        context.user_data["audience"] = text
         await show_catalog(message, context)
         return
 
     if text == BACK_BUTTON:
-        await start(update, context)
+        if page == "catalog":
+            await show_audiences(message, context)
+        elif page == "choose_style":
+            await show_catalog(message, context)
+        elif page == "order_pending":
+            context.user_data.pop("order_photos", None)
+            context.user_data["page"] = "catalog"
+            await show_catalog(message, context)
+        else:
+            await start(update, context)
         return
     if text == "Готово" and context.user_data.get("page") == "order_pending":
         photos = context.user_data.get("order_photos", [])
@@ -234,6 +180,8 @@ async def messages(
             chat_id=ADMIN_ID,
             text=(
                 "💌 НОВЫЙ ЗАКАЗ!\n\n"
+                f"📂 Направление: {DIRECTION_LABELS[context.user_data['direction']]}\n"
+                f"Категория: {context.user_data['audience']}\n"
                 f"🎄 Студия: {style}\n"
                 f"👤 Клиент: {user.full_name}\n"
                 f"🔗 Telegram: {username}\n"
@@ -253,10 +201,10 @@ async def messages(
         await message.reply_text(
             "🤍 Спасибо! Ваш заказ отправлен.\n"
             "Мы свяжемся с вами в Telegram.",
-            reply_markup=make_keyboard([MAIN_BUTTON]),
+            reply_markup=make_keyboard(MAIN_BUTTONS),
         )
         return
-    if text == ORDER_BUTTON:
+    if text == ORDER_BUTTON and page == "catalog":
         context.user_data["page"] = "choose_style"
 
         numbers = [
@@ -297,7 +245,7 @@ async def messages(
 
     await message.reply_text(
         "🤍 Выберите пункт меню.",
-        reply_markup=make_keyboard([MAIN_BUTTON]),
+        reply_markup=make_keyboard(MAIN_BUTTONS),
     )
 
 async def receive_photo(
@@ -322,11 +270,6 @@ def main():
             "Не найден TELEGRAM_BOT_TOKEN"
         )
 
-    photos = [
-        NUMBERED_FOLDER / f"{number:02d}.jpg"
-        for number in range(1, 10)
-    ]
-
     app = (
         Application.builder()
         .token(token)
@@ -338,7 +281,6 @@ def main():
         .build()
     )
 
-    app.bot_data["photos"] = photos
 
     app.add_handler(
         CommandHandler("start", start)
