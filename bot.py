@@ -262,8 +262,53 @@ async def receive_photo(
     photos.append(update.message.photo[-1].file_id)
 
     await update.message.reply_text(
-        f"📸 Фотография получена! Всего: {len(photos)}.\n\n"
-        "Отправьте следующую или нажмите «Готово»."
+        f"📸 Фотография получена! Всего: {len(photos)}.\n"
+        "Можете отправить ещё фотографии. Заказ автоматически отправится через 10 секунд после последней."
+    )
+
+    context.user_data["finish_task"] = asyncio.create_task(
+        finish_order_after_delay(context, update)
+    )
+async def finish_order_after_delay(context, update):
+    await asyncio.sleep(10)
+
+    if context.user_data.get("finish_task") is not asyncio.current_task():
+        return    
+
+    photos = context.user_data.get("order_photos", [])
+    if not photos:
+        return
+
+    user = update.effective_user
+    username = f"@{user.username}" if user.username else "Не указан"
+    style = context.user_data.get("selected_style")
+
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=(
+            "💌 НОВЫЙ ЗАКАЗ!\n\n"
+            f"📂 Направление: {DIRECTION_LABELS[context.user_data['direction']]}\n"
+            f"Категория: {context.user_data['audience']}\n"
+            f"🎄 Студия: {style}\n"
+            f"👤 Клиент: {user.full_name}\n"
+            f"🔗 Telegram: {username}\n"
+            f"🆔 ID клиента: {user.id}\n"
+            f"📸 Фотографий: {len(photos)}"
+        ),
+    )
+
+    for photo_id in photos:
+        await context.bot.send_photo(
+            chat_id=ADMIN_ID,
+            photo=photo_id,
+        )
+
+    context.user_data.clear()
+
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="💌 Спасибо! Ваш заказ отправлен.\nМы свяжемся с вами в Telegram.",
+        reply_markup=make_keyboard(MAIN_BUTTONS),
     )
 def main():
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
