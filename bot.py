@@ -15,11 +15,11 @@ from telegram.ext import (
     filters,
 )
 
-MAIN_BUTTON = "🎄 Новогодняя & рождественская фотосессия"
+MAIN_BUTTON = "🎄 Новогодняя & Рождественская фотосессия"
 MAIN_BUTTONS = [MAIN_BUTTON, "📸 Студийная фотосессия", "🌿 Уличная фотосессия"]
 AUDIENCES = ["Женская", "Мужская", "Детская", "Семейная"]
 DIRECTIONS = dict(zip(MAIN_BUTTONS, ["new_year", "studio", "outdoor"]))
-DIRECTION_LABELS = dict(zip(MAIN_BUTTONS, ["🎄 Новогодняя & рождественская фотосессия", "📸 Студийная фотосессия", "🌿 Уличная фотосессия"]))
+DIRECTION_LABELS = dict(zip(MAIN_BUTTONS, ["🎄 Новогодняя & Рождественская фотосессия", "📸 Студийная фотосессия", "🌿 Уличная фотосессия"]))
 AUDIENCE_DIRS = dict(zip(AUDIENCES, ["female", "male", "child", "family"]))
 ORDER_BUTTON = "💌 Заказать"
 BACK_BUTTON = "⬅️ Назад"
