@@ -96,7 +96,7 @@ async def show_catalog(message, context):
     paths = catalog_paths(context.user_data["direction"], context.user_data["audience"])
     if not paths:
         return
-    context.user_data["page"] = "catalog"
+    context.user_data["page"] = "choose_style"
     context.user_data.pop("order_photos", None)
     context.user_data.pop("selected_style", None)
 
