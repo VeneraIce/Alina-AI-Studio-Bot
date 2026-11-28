@@ -239,14 +239,10 @@ async def messages(
 
         await message.reply_text(
             f"🤍 Вы выбрали студию {text}.\n\n"
-            "📸 Теперь отправьте фотографии, "
-            "которые хотите использовать для фотосессии.\n\n"
-            "Можно отправить несколько фотографий. "
-            "Когда закончите, напишите «Готово».",
-            reply_markup=make_keyboard(
-                ["Готово", BACK_BUTTON, HOME_BUTTON]
-            ),
-        )        
+            "📸 Теперь отправьте фотографии, которые хотите использовать для фотосессии.\n"
+            "Можно отправить несколько фотографий.",
+            reply_markup=make_keyboard([BACK_BUTTON, HOME_BUTTON]),
+        )
         return
 
     await message.reply_text(
